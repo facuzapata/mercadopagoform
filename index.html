@@ -133,8 +133,8 @@
                     userId: 9,
                     courseId: "zwx9hi2a111ow1o0pc8oggoo",
                     mercadoPagoTokenId: tokenRes.id,
-                    paymentMethodId: tokenRes.card?.payment_method?.id,
-                    paymentType: tokenRes.card?.payment_method?.payment_type_id,
+                    paymentMethodId: card.payment_method?.id || "debmaster", // fallback en test
+                    paymentType: card.payment_method?.payment_type_id || "debit_card",
                     installments: parseInt(document.getElementById("installments").value || "1")
                 };
 
