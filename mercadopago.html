@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Demo: Obtener Card Token - Mercado Pago</title>
+
+    <!-- SDK Mercado Pago v2 (cliente) -->
+    <script src="https://sdk.mercadopago.com/js/v2"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 720px;
+            margin: 32px auto;
+            padding: 0 16px;
+        }
+
+        label {
+            display: block;
+            margin-top: 10px;
+            font-weight: 600;
+        }
+
+        input,
+        select,
+        button {
+            width: 100%;
+            padding: 8px;
+            margin-top: 6px;
+            box-sizing: border-box;
+        }
+
+        .row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .row>* {
+            flex: 1;
+        }
+
+        .info {
+            font-size: 0.9rem;
+            color: #555;
+            margin-top: 8px;
+        }
+
+        pre {
+            background: #f6f8fa;
+            padding: 10px;
+            border-radius: 6px;
+            overflow: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Demo: obtener card token (Mercado Pago)</h1>
+
+    <p class="info">
+        Reemplazá <code>YOUR_PUBLIC_KEY</code> por la Public Key (TEST o PROD). Este demo crea un token que deberías
+        enviar a tu backend seguro.
+    </p>
+
+    <form id="mp-form">
+        <label>Email del comprador
+            <input id="email" type="email" value="test_user_19653727@testuser.com" required />
+        </label>
+
+        <label>Número de tarjeta
+            <input id="cardNumber" placeholder="4509 9535 6623 3704" data-checkout="cardNumber" required />
+        </label>
+
+        <div class="row">
+            <div>
+                <label>Mes expiración
+                    <input id="cardExpirationMonth" placeholder="12" data-checkout="cardExpirationMonth" required />
+                </label>
+            </div>
+            <div>
+                <label>Año expiración
+                    <input id="cardExpirationYear" placeholder="2028" data-checkout="cardExpirationYear" required />
+                </label>
+            </div>
+        </div>
+
+        <div class="row">
+            <div>
+                <label>CVV
+                    <input id="securityCode" placeholder="123" data-checkout="securityCode" required />
+                </label>
+            </div>
+            <div>
+                <label>Titular (cardholder name)
+                    <input id="cardholderName" placeholder="Nombre Apellido" data-checkout="cardholderName" required />
+                </label>
+            </div>
+        </div>
+
+        <label>Documento (tipo y número)
+            <div class="row">
+                <select id="docType" data-checkout="docType">
+                    <option value="CPF">CPF</option>
+                    <option value="DNI" selected>DNI</option>
+                    <option value="OTHER">OTHER</option>
+                </select>
+                <input id="docNumber" placeholder="19119119100" data-checkout="docNumber" />
+            </div>
+        </label>
+
+        <label>Payment method id (opcional - para test)
+            <input id="paymentMethod" placeholder="visa, mastercard..." />
+        </label>
+
+        <button id="getTokenBtn" type="submit">Generar card token</button>
+    </form>
+
+    <h3>Resultado</h3>
+    <pre id="result">Aquí aparecerá el token o errores...</pre>
+
+    <script>
+        // Reemplazá con tu PUBLIC KEY (TEST o PROD).
+        const PUBLIC_KEY = "APP_USR-b0a1df7d-a5c5-48bf-a5cb-1e113adf08f9";
+
+        // Inicializa MercadoPago SDK v2
+        const mp = new MercadoPago(PUBLIC_KEY, { locale: 'es-AR' });
+
+        // Función para crear token usando la API cliente
+        async function createCardToken(cardData) {
+            // createCardToken es parte del SDK cliente (v2) y devuelve el card token.
+            // Ver docs: createCardToken / cardForm tokenization flow. 
+            try {
+                const tokenResponse = await mp.createCardToken(cardData);
+                return tokenResponse; // contiene id (card token) y otros datos
+            } catch (err) {
+                throw err;
+            }
+        }
+
+        document.getElementById('mp-form').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const cardNumber = document.getElementById('cardNumber').value.replace(/\s+/g, '');
+            const cardExpirationMonth = document.getElementById('cardExpirationMonth').value;
+            const cardExpirationYear = document.getElementById('cardExpirationYear').value;
+            const securityCode = document.getElementById('securityCode').value;
+            const cardholderName = document.getElementById('cardholderName').value;
+            const docType = document.getElementById('docType').value;
+            const docNumber = document.getElementById('docNumber').value;
+
+            const payload = {
+                card_number: cardNumber,
+                expiration_month: cardExpirationMonth,
+                expiration_year: cardExpirationYear,
+                security_code: securityCode,
+                cardholder: {
+                    name: cardholderName,
+                    identification: {
+                        type: docType,
+                        number: docNumber
+                    }
+                },
+                // optional: public_key is not required because SDK was initialized with it
+                // public_key: PUBLIC_KEY
+            };
+
+            const resultEl = document.getElementById('result');
+            resultEl.textContent = "Generando token...";
+
+            try {
+                const tokenRes = await createCardToken(payload);
+                // tokenRes usually includes an "id" property (card token)
+                resultEl.textContent = JSON.stringify(tokenRes, null, 2);
+
+                // EJEMPLO: enviar token al backend para crear el pago
+                // fetch('/api/mercadopago/pay', {
+                //   method: 'POST',
+                //   headers: { 'Content-Type': 'application/json' },
+                //   body: JSON.stringify({ token: tokenRes.id, email })
+                // });
+
+            } catch (err) {
+                // Mostrar error
+                resultEl.textContent = 'Error al generar token:\n' + (err?.message || JSON.stringify(err));
+                console.error(err);
+            }
+        });
+
+        // Datos de prueba (opcional): podés prellenar con tarjetas de prueba.
+        // Tarjetas de prueba: 4509 9535 6623 3704 (Visa) y otras según docs de MP.
+    </script>
+</body>
+
+</html>
