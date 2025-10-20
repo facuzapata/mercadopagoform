@@ -121,25 +121,30 @@
 
         let paymentMethodId = null;
 
-        // 🔹 Detectar método de pago al escribir los primeros 6 dígitos (BIN)
+        // 🔹 Detectar método de pago y cuotas
         cardNumberInput.addEventListener("keyup", async (e) => {
             const cardNumber = e.target.value.replace(/\s/g, "");
             if (cardNumber.length >= 6) {
                 const bin = cardNumber.substring(0, 6);
                 try {
-                    const methods = await mp.getPaymentMethods({ bin });
-                    if (methods && methods.length > 0) {
-                        paymentMethodId = methods[0].id;
-                        paymentMethodInput.value = paymentMethodId;
+                    // Obtener método de pago
+                    const paymentMethod = await mp.getPaymentMethod({ bin });
+                    paymentMethodId = paymentMethod.id;
+                    paymentMethodInput.value = paymentMethodId;
 
-                        // obtener cuotas disponibles
-                        const amount = 1000; // 💰 ejemplo, se puede reemplazar con precio real
-                        const installmentsInfo = await mp.getInstallments({ amount, bin });
-                        const options = installmentsInfo[0].payer_costs.map(c =>
-                            `<option value="${c.installments}">${c.recommended_message}</option>`
-                        );
-                        installmentsSelect.innerHTML = options.join("");
-                    }
+                    // Obtener cuotas disponibles
+                    const amount = 1000; // 💰 ejemplo
+                    const installmentsInfo = await mp.getInstallments({
+                        amount,
+                        bin,
+                        payment_method_id: paymentMethodId
+                    });
+
+                    const options = installmentsInfo[0].payer_costs.map(c =>
+                        `<option value="${c.installments}">${c.recommended_message}</option>`
+                    );
+                    installmentsSelect.innerHTML = options.join("");
+
                 } catch (err) {
                     console.error("Error obteniendo método/cuotas:", err);
                 }
