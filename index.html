@@ -49,7 +49,7 @@
 
 <body>
 
-    <h1>Demo PRO: token + cuotas (oficial)ss</h1>
+    <h1>Demo PRO: token + cuotas</h1>
 
     <form id="mp-form">
         <label>Email
@@ -87,17 +87,12 @@
             </div>
         </label>
 
-        <label>Método de pago detectado
-            <input id="paymentMethod" readonly>
-        </label>
-
-        <label>Tipo de tarjeta
-            <input id="paymentType" readonly>
-        </label>
-
         <label>Cuotas
             <select id="installments" required>
                 <option value="">Seleccionar...</option>
+                <option value="1">1 cuota</option>
+                <option value="3">3 cuotas</option>
+                <option value="6">6 cuotas</option>
             </select>
         </label>
 
@@ -111,52 +106,13 @@
         const PUBLIC_KEY = "TEST-0bea6f5a-327d-4e6d-a4ad-cb020866f515";
         const mp = new MercadoPago(PUBLIC_KEY, { locale: "es-AR" });
 
-        const cardNumberInput = document.getElementById("cardNumber");
-        const installmentsSelect = document.getElementById("installments");
-        const paymentMethodInput = document.getElementById("paymentMethod");
-        const paymentTypeInput = document.getElementById("paymentType");
-
-        let paymentMethodId = null;
-        let paymentTypeId = null;
-
-        // Detecta el método de pago oficialmente según el BIN
-        cardNumberInput.addEventListener("keyup", async (e) => {
-            const cardNumber = e.target.value.replace(/\s/g, '');
-            if (cardNumber.length >= 6) {
-                const bin = cardNumber.substring(0, 6);
-                try {
-                    const methods = await mp.getPaymentMethods({ bin });
-                    if (methods && methods.length > 0) {
-                        const method = methods[0];
-                        paymentMethodId = method.id;
-                        paymentTypeId = method.payment_type_id;
-                        paymentMethodInput.value = paymentMethodId;
-                        paymentTypeInput.value = paymentTypeId;
-
-                        // Actualizar cuotas recomendadas (demo simplificada)
-                        const mockInstallments = [
-                            { installments: 1, recommended_message: "1 cuota" },
-                            { installments: 3, recommended_message: "3 cuotas" },
-                            { installments: 6, recommended_message: "6 cuotas" }
-                        ];
-                        installmentsSelect.innerHTML = mockInstallments.map(c =>
-                            `<option value="${c.installments}">${c.recommended_message}</option>`
-                        ).join('');
-                    }
-                } catch (err) {
-                    console.error("Error detectando método de pago:", err);
-                }
-            }
-        });
-
-        // Crear token y mostrar JSON final
         document.getElementById("mp-form").addEventListener("submit", async (e) => {
             e.preventDefault();
             const resultEl = document.getElementById("result");
 
             try {
                 const cardData = {
-                    card_number: cardNumberInput.value.replace(/\s/g, ""),
+                    card_number: document.getElementById("cardNumber").value.replace(/\s/g, ""),
                     expiration_month: document.getElementById("cardExpirationMonth").value,
                     expiration_year: document.getElementById("cardExpirationYear").value,
                     security_code: document.getElementById("securityCode").value,
@@ -169,15 +125,17 @@
                     }
                 };
 
+                // Crear token con MercadoPago
                 const tokenRes = await mp.createCardToken(cardData);
 
+                // payment_method_id y payment_type_id vienen en tokenRes
                 const finalData = {
                     userId: 9,
                     courseId: "zwx9hi2a111ow1o0pc8oggoo",
                     mercadoPagoTokenId: tokenRes.id,
-                    installments: parseInt(installmentsSelect.value || 1),
-                    paymentMethodId,
-                    paymentType: paymentTypeId
+                    paymentMethodId: tokenRes.card?.payment_method?.id,
+                    paymentType: tokenRes.card?.payment_method?.payment_type_id,
+                    installments: parseInt(document.getElementById("installments").value || "1")
                 };
 
                 resultEl.textContent = JSON.stringify(finalData, null, 2);
