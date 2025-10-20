@@ -49,11 +49,11 @@
 
 <body>
 
-    <h1>Demo PRO: token + cuotas (simulado)</h1>
+    <h1>Demo PRO: token + cuotas (oficial)ss</h1>
 
     <form id="mp-form">
         <label>Email
-            <input id="email" type="email" value="APP_USR-03f91d11-09d8-4c9f-938e-88e3cd357cf1" required>
+            <input id="email" type="email" value="test_user@example.com" required>
         </label>
 
         <label>Número de tarjeta
@@ -61,13 +61,21 @@
         </label>
 
         <div class="row">
-            <div><label>Mes<input id="cardExpirationMonth" placeholder="12" required></label></div>
-            <div><label>Año<input id="cardExpirationYear" placeholder="2028" required></label></div>
+            <div>
+                <label>Mes<input id="cardExpirationMonth" placeholder="12" required></label>
+            </div>
+            <div>
+                <label>Año<input id="cardExpirationYear" placeholder="2028" required></label>
+            </div>
         </div>
 
         <div class="row">
-            <div><label>CVV<input id="securityCode" placeholder="123" required></label></div>
-            <div><label>Titular<input id="cardholderName" placeholder="Nombre Apellido" required></label></div>
+            <div>
+                <label>CVV<input id="securityCode" placeholder="123" required></label>
+            </div>
+            <div>
+                <label>Titular<input id="cardholderName" placeholder="Nombre Apellido" required></label>
+            </div>
         </div>
 
         <label>Documento
@@ -81,6 +89,10 @@
 
         <label>Método de pago detectado
             <input id="paymentMethod" readonly>
+        </label>
+
+        <label>Tipo de tarjeta
+            <input id="paymentType" readonly>
         </label>
 
         <label>Cuotas
@@ -102,27 +114,38 @@
         const cardNumberInput = document.getElementById("cardNumber");
         const installmentsSelect = document.getElementById("installments");
         const paymentMethodInput = document.getElementById("paymentMethod");
+        const paymentTypeInput = document.getElementById("paymentType");
 
         let paymentMethodId = null;
+        let paymentTypeId = null;
 
-        // Simulación de detección de método y cuotas
-        cardNumberInput.addEventListener("keyup", (e) => {
+        // Detecta el método de pago oficialmente según el BIN
+        cardNumberInput.addEventListener("keyup", async (e) => {
             const cardNumber = e.target.value.replace(/\s/g, '');
             if (cardNumber.length >= 6) {
                 const bin = cardNumber.substring(0, 6);
-                // Demo: método de pago simulado según BIN
-                paymentMethodId = bin.startsWith("4509") ? "visa" : "master";
-                paymentMethodInput.value = paymentMethodId;
+                try {
+                    const methods = await mp.getPaymentMethods({ bin });
+                    if (methods && methods.length > 0) {
+                        const method = methods[0];
+                        paymentMethodId = method.id;
+                        paymentTypeId = method.payment_type_id;
+                        paymentMethodInput.value = paymentMethodId;
+                        paymentTypeInput.value = paymentTypeId;
 
-                // Demo: cuotas simuladas
-                const mockInstallments = [
-                    { installments: 1, recommended_message: "1 cuota de $1000" },
-                    { installments: 3, recommended_message: "3 cuotas de $350 c/u" },
-                    { installments: 6, recommended_message: "6 cuotas de $180 c/u" }
-                ];
-                installmentsSelect.innerHTML = mockInstallments.map(c =>
-                    `<option value="${c.installments}">${c.recommended_message}</option>`
-                ).join('');
+                        // Actualizar cuotas recomendadas (demo simplificada)
+                        const mockInstallments = [
+                            { installments: 1, recommended_message: "1 cuota" },
+                            { installments: 3, recommended_message: "3 cuotas" },
+                            { installments: 6, recommended_message: "6 cuotas" }
+                        ];
+                        installmentsSelect.innerHTML = mockInstallments.map(c =>
+                            `<option value="${c.installments}">${c.recommended_message}</option>`
+                        ).join('');
+                    }
+                } catch (err) {
+                    console.error("Error detectando método de pago:", err);
+                }
             }
         });
 
@@ -147,12 +170,14 @@
                 };
 
                 const tokenRes = await mp.createCardToken(cardData);
+
                 const finalData = {
                     userId: 9,
                     courseId: "zwx9hi2a111ow1o0pc8oggoo",
                     mercadoPagoTokenId: tokenRes.id,
                     installments: parseInt(installmentsSelect.value || 1),
-                    paymentMethodId
+                    paymentMethodId,
+                    paymentType: paymentTypeId
                 };
 
                 resultEl.textContent = JSON.stringify(finalData, null, 2);
