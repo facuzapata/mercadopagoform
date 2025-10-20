@@ -2,11 +2,10 @@
 <html lang="es">
 
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Demo Mercado Pago PRO (token + cuotas)</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Demo Mercado Pago PRO (solo frontend)</title>
     <script src="https://sdk.mercadopago.com/js/v2"></script>
-
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -49,41 +48,26 @@
 </head>
 
 <body>
-    <h1>Demo PRO: token + método de pago + cuotas</h1>
+
+    <h1>Demo PRO: token + cuotas (simulado)</h1>
 
     <form id="mp-form">
         <label>Email
-            <input id="email" type="email" value="test_user_19653727@testuser.com" required />
+            <input id="email" type="email" value="test_user_19653727@testuser.com" required>
         </label>
 
         <label>Número de tarjeta
-            <input id="cardNumber" placeholder="4509 9535 6623 3704" required />
+            <input id="cardNumber" placeholder="4509 9535 6623 3704" required>
         </label>
 
         <div class="row">
-            <div>
-                <label>Mes
-                    <input id="cardExpirationMonth" placeholder="12" required />
-                </label>
-            </div>
-            <div>
-                <label>Año
-                    <input id="cardExpirationYear" placeholder="2028" required />
-                </label>
-            </div>
+            <div><label>Mes<input id="cardExpirationMonth" placeholder="12" required></label></div>
+            <div><label>Año<input id="cardExpirationYear" placeholder="2028" required></label></div>
         </div>
 
         <div class="row">
-            <div>
-                <label>CVV
-                    <input id="securityCode" placeholder="123" required />
-                </label>
-            </div>
-            <div>
-                <label>Titular
-                    <input id="cardholderName" placeholder="Nombre Apellido" required />
-                </label>
-            </div>
+            <div><label>CVV<input id="securityCode" placeholder="123" required></label></div>
+            <div><label>Titular<input id="cardholderName" placeholder="Nombre Apellido" required></label></div>
         </div>
 
         <label>Documento
@@ -91,12 +75,12 @@
                 <select id="docType">
                     <option value="DNI">DNI</option>
                 </select>
-                <input id="docNumber" placeholder="19119119" />
+                <input id="docNumber" placeholder="19119119">
             </div>
         </label>
 
         <label>Método de pago detectado
-            <input id="paymentMethod" readonly />
+            <input id="paymentMethod" readonly>
         </label>
 
         <label>Cuotas
@@ -112,7 +96,7 @@
     <pre id="result">Esperando acción...</pre>
 
     <script>
-        const PUBLIC_KEY = "APP_USR-b0a1df7d-a5c5-48bf-a5cb-1e113adf08f9"; // ← reemplazá
+        const PUBLIC_KEY = "APP_USR-b0a1df7d-a5c5-48bf-a5cb-1e113adf08f9";
         const mp = new MercadoPago(PUBLIC_KEY, { locale: "es-AR" });
 
         const cardNumberInput = document.getElementById("cardNumber");
@@ -121,37 +105,28 @@
 
         let paymentMethodId = null;
 
-        // 🔹 Detectar método de pago y cuotas
-        cardNumberInput.addEventListener("keyup", async (e) => {
-            const cardNumber = e.target.value.replace(/\s/g, "");
+        // Simulación de detección de método y cuotas
+        cardNumberInput.addEventListener("keyup", (e) => {
+            const cardNumber = e.target.value.replace(/\s/g, '');
             if (cardNumber.length >= 6) {
                 const bin = cardNumber.substring(0, 6);
-                try {
-                    // Obtener método de pago
-                    const paymentMethod = await mp.getPaymentMethod({ bin });
-                    paymentMethodId = paymentMethod.id;
-                    paymentMethodInput.value = paymentMethodId;
+                // Demo: método de pago simulado según BIN
+                paymentMethodId = bin.startsWith("4509") ? "visa" : "master";
+                paymentMethodInput.value = paymentMethodId;
 
-                    // Obtener cuotas disponibles
-                    const amount = 1000; // 💰 ejemplo
-                    const installmentsInfo = await mp.getInstallments({
-                        amount,
-                        bin,
-                        payment_method_id: paymentMethodId
-                    });
-
-                    const options = installmentsInfo[0].payer_costs.map(c =>
-                        `<option value="${c.installments}">${c.recommended_message}</option>`
-                    );
-                    installmentsSelect.innerHTML = options.join("");
-
-                } catch (err) {
-                    console.error("Error obteniendo método/cuotas:", err);
-                }
+                // Demo: cuotas simuladas
+                const mockInstallments = [
+                    { installments: 1, recommended_message: "1 cuota de $1000" },
+                    { installments: 3, recommended_message: "3 cuotas de $350 c/u" },
+                    { installments: 6, recommended_message: "6 cuotas de $180 c/u" }
+                ];
+                installmentsSelect.innerHTML = mockInstallments.map(c =>
+                    `<option value="${c.installments}">${c.recommended_message}</option>`
+                ).join('');
             }
         });
 
-        // 🔹 Crear token y mostrar JSON final
+        // Crear token y mostrar JSON final
         document.getElementById("mp-form").addEventListener("submit", async (e) => {
             e.preventDefault();
             const resultEl = document.getElementById("result");
@@ -173,7 +148,7 @@
 
                 const tokenRes = await mp.createCardToken(cardData);
                 const finalData = {
-                    userId: 9, // ejemplo
+                    userId: 9,
                     courseId: "zwx9hi2a111ow1o0pc8oggoo",
                     mercadoPagoTokenId: tokenRes.id,
                     installments: parseInt(installmentsSelect.value || 1),
@@ -182,14 +157,13 @@
 
                 resultEl.textContent = JSON.stringify(finalData, null, 2);
 
-                // Aquí podrías POSTEARLO a tu backend
-                // await fetch('/api/mercadopago/pay', { method:'POST', body: JSON.stringify(finalData), headers:{'Content-Type':'application/json'} })
             } catch (err) {
                 console.error(err);
                 resultEl.textContent = "Error: " + (err.message || JSON.stringify(err));
             }
         });
     </script>
+
 </body>
 
 </html>
