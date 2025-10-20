@@ -4,9 +4,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Demo: Obtener Card Token - Mercado Pago</title>
-
-    <!-- SDK Mercado Pago v2 (cliente) -->
+    <title>Demo Mercado Pago PRO (token + cuotas)</title>
     <script src="https://sdk.mercadopago.com/js/v2"></script>
 
     <style>
@@ -41,12 +39,6 @@
             flex: 1;
         }
 
-        .info {
-            font-size: 0.9rem;
-            color: #555;
-            margin-top: 8px;
-        }
-
         pre {
             background: #f6f8fa;
             padding: 10px;
@@ -57,31 +49,26 @@
 </head>
 
 <body>
-    <h1>Demo: obtener card token (Mercado Pago)</h1>
-
-    <p class="info">
-        Reemplazá <code>YOUR_PUBLIC_KEY</code> por la Public Key (TEST o PROD). Este demo crea un token que deberías
-        enviar a tu backend seguro.
-    </p>
+    <h1>Demo PRO: token + método de pago + cuotas</h1>
 
     <form id="mp-form">
-        <label>Email del comprador
+        <label>Email
             <input id="email" type="email" value="test_user_19653727@testuser.com" required />
         </label>
 
         <label>Número de tarjeta
-            <input id="cardNumber" placeholder="4509 9535 6623 3704" data-checkout="cardNumber" required />
+            <input id="cardNumber" placeholder="4509 9535 6623 3704" required />
         </label>
 
         <div class="row">
             <div>
-                <label>Mes expiración
-                    <input id="cardExpirationMonth" placeholder="12" data-checkout="cardExpirationMonth" required />
+                <label>Mes
+                    <input id="cardExpirationMonth" placeholder="12" required />
                 </label>
             </div>
             <div>
-                <label>Año expiración
-                    <input id="cardExpirationYear" placeholder="2028" data-checkout="cardExpirationYear" required />
+                <label>Año
+                    <input id="cardExpirationYear" placeholder="2028" required />
                 </label>
             </div>
         </div>
@@ -89,107 +76,114 @@
         <div class="row">
             <div>
                 <label>CVV
-                    <input id="securityCode" placeholder="123" data-checkout="securityCode" required />
+                    <input id="securityCode" placeholder="123" required />
                 </label>
             </div>
             <div>
-                <label>Titular (cardholder name)
-                    <input id="cardholderName" placeholder="Nombre Apellido" data-checkout="cardholderName" required />
+                <label>Titular
+                    <input id="cardholderName" placeholder="Nombre Apellido" required />
                 </label>
             </div>
         </div>
 
-        <label>Documento (tipo y número)
+        <label>Documento
             <div class="row">
-                <select id="docType" data-checkout="docType">
-                    <option value="CPF">CPF</option>
-                    <option value="DNI" selected>DNI</option>
-                    <option value="OTHER">OTHER</option>
+                <select id="docType">
+                    <option value="DNI">DNI</option>
                 </select>
-                <input id="docNumber" placeholder="19119119100" data-checkout="docNumber" />
+                <input id="docNumber" placeholder="19119119" />
             </div>
         </label>
 
-        <label>Payment method id (opcional - para test)
-            <input id="paymentMethod" placeholder="visa, mastercard..." />
+        <label>Método de pago detectado
+            <input id="paymentMethod" readonly />
         </label>
 
-        <button id="getTokenBtn" type="submit">Generar card token</button>
+        <label>Cuotas
+            <select id="installments" required>
+                <option value="">Seleccionar...</option>
+            </select>
+        </label>
+
+        <button type="submit">Generar datos</button>
     </form>
 
     <h3>Resultado</h3>
-    <pre id="result">Aquí aparecerá el token o errores...</pre>
+    <pre id="result">Esperando acción...</pre>
 
     <script>
-        // Reemplazá con tu PUBLIC KEY (TEST o PROD).
-        const PUBLIC_KEY = "APP_USR-b0a1df7d-a5c5-48bf-a5cb-1e113adf08f9";
+        const PUBLIC_KEY = "APP_USR-b0a1df7d-a5c5-48bf-a5cb-1e113adf08f9"; // ← reemplazá
+        const mp = new MercadoPago(PUBLIC_KEY, { locale: "es-AR" });
 
-        // Inicializa MercadoPago SDK v2
-        const mp = new MercadoPago(PUBLIC_KEY, { locale: 'es-AR' });
+        const cardNumberInput = document.getElementById("cardNumber");
+        const installmentsSelect = document.getElementById("installments");
+        const paymentMethodInput = document.getElementById("paymentMethod");
 
-        // Función para crear token usando la API cliente
-        async function createCardToken(cardData) {
-            // createCardToken es parte del SDK cliente (v2) y devuelve el card token.
-            // Ver docs: createCardToken / cardForm tokenization flow. 
-            try {
-                const tokenResponse = await mp.createCardToken(cardData);
-                return tokenResponse; // contiene id (card token) y otros datos
-            } catch (err) {
-                throw err;
-            }
-        }
+        let paymentMethodId = null;
 
-        document.getElementById('mp-form').addEventListener('submit', async function (e) {
-            e.preventDefault();
-            const email = document.getElementById('email').value;
-            const cardNumber = document.getElementById('cardNumber').value.replace(/\s+/g, '');
-            const cardExpirationMonth = document.getElementById('cardExpirationMonth').value;
-            const cardExpirationYear = document.getElementById('cardExpirationYear').value;
-            const securityCode = document.getElementById('securityCode').value;
-            const cardholderName = document.getElementById('cardholderName').value;
-            const docType = document.getElementById('docType').value;
-            const docNumber = document.getElementById('docNumber').value;
+        // 🔹 Detectar método de pago al escribir los primeros 6 dígitos (BIN)
+        cardNumberInput.addEventListener("keyup", async (e) => {
+            const cardNumber = e.target.value.replace(/\s/g, "");
+            if (cardNumber.length >= 6) {
+                const bin = cardNumber.substring(0, 6);
+                try {
+                    const methods = await mp.getPaymentMethods({ bin });
+                    if (methods && methods.length > 0) {
+                        paymentMethodId = methods[0].id;
+                        paymentMethodInput.value = paymentMethodId;
 
-            const payload = {
-                card_number: cardNumber,
-                expiration_month: cardExpirationMonth,
-                expiration_year: cardExpirationYear,
-                security_code: securityCode,
-                cardholder: {
-                    name: cardholderName,
-                    identification: {
-                        type: docType,
-                        number: docNumber
+                        // obtener cuotas disponibles
+                        const amount = 1000; // 💰 ejemplo, se puede reemplazar con precio real
+                        const installmentsInfo = await mp.getInstallments({ amount, bin });
+                        const options = installmentsInfo[0].payer_costs.map(c =>
+                            `<option value="${c.installments}">${c.recommended_message}</option>`
+                        );
+                        installmentsSelect.innerHTML = options.join("");
                     }
-                },
-                // optional: public_key is not required because SDK was initialized with it
-                // public_key: PUBLIC_KEY
-            };
-
-            const resultEl = document.getElementById('result');
-            resultEl.textContent = "Generando token...";
-
-            try {
-                const tokenRes = await createCardToken(payload);
-                // tokenRes usually includes an "id" property (card token)
-                resultEl.textContent = JSON.stringify(tokenRes, null, 2);
-
-                // EJEMPLO: enviar token al backend para crear el pago
-                // fetch('/api/mercadopago/pay', {
-                //   method: 'POST',
-                //   headers: { 'Content-Type': 'application/json' },
-                //   body: JSON.stringify({ token: tokenRes.id, email })
-                // });
-
-            } catch (err) {
-                // Mostrar error
-                resultEl.textContent = 'Error al generar token:\n' + (err?.message || JSON.stringify(err));
-                console.error(err);
+                } catch (err) {
+                    console.error("Error obteniendo método/cuotas:", err);
+                }
             }
         });
 
-        // Datos de prueba (opcional): podés prellenar con tarjetas de prueba.
-        // Tarjetas de prueba: 4509 9535 6623 3704 (Visa) y otras según docs de MP.
+        // 🔹 Crear token y mostrar JSON final
+        document.getElementById("mp-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const resultEl = document.getElementById("result");
+
+            try {
+                const cardData = {
+                    card_number: cardNumberInput.value.replace(/\s/g, ""),
+                    expiration_month: document.getElementById("cardExpirationMonth").value,
+                    expiration_year: document.getElementById("cardExpirationYear").value,
+                    security_code: document.getElementById("securityCode").value,
+                    cardholder: {
+                        name: document.getElementById("cardholderName").value,
+                        identification: {
+                            type: document.getElementById("docType").value,
+                            number: document.getElementById("docNumber").value
+                        }
+                    }
+                };
+
+                const tokenRes = await mp.createCardToken(cardData);
+                const finalData = {
+                    userId: 9, // ejemplo
+                    courseId: "zwx9hi2a111ow1o0pc8oggoo",
+                    mercadoPagoTokenId: tokenRes.id,
+                    installments: parseInt(installmentsSelect.value || 1),
+                    paymentMethodId
+                };
+
+                resultEl.textContent = JSON.stringify(finalData, null, 2);
+
+                // Aquí podrías POSTEARLO a tu backend
+                // await fetch('/api/mercadopago/pay', { method:'POST', body: JSON.stringify(finalData), headers:{'Content-Type':'application/json'} })
+            } catch (err) {
+                console.error(err);
+                resultEl.textContent = "Error: " + (err.message || JSON.stringify(err));
+            }
+        });
     </script>
 </body>
 
