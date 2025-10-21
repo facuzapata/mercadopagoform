@@ -1,57 +1,91 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 
 <head>
-    <meta charset="utf-8" />
-    <title>Pago con tarjeta</title>
-    <script src="https://sdk.mercadopago.com/js/v2"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pago con Tarjeta - MercadoPago</title>
     <style>
-        .field {
-            margin-bottom: 12px;
-        }
-
-        .field input,
-        .field select {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 14px;
-            box-sizing: border-box;
-        }
-
-        .field select {
-            background-color: white;
-            cursor: pointer;
-        }
-
-        button {
-            background-color: #009ee3;
-            color: white;
-            padding: 12px 24px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            width: 100%;
-            margin-top: 10px;
-        }
-
-        button:hover {
-            background-color: #007bb5;
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 500px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
         }
 
         .container {
-            max-width: 400px;
-            margin: 50px auto;
-            padding: 20px;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+
+        .field {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 12px;
             border: 1px solid #ddd;
-            border-radius: 8px;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: #009ee3;
+            box-shadow: 0 0 5px rgba(0, 158, 227, 0.3);
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            background-color: #009ee3;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #007bb3;
+        }
+
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
         }
 
         .error {
-            color: red;
-            font-size: 12px;
+            color: #e74c3c;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .success {
+            color: #27ae60;
+            font-size: 14px;
             margin-top: 5px;
         }
     </style>
@@ -59,233 +93,204 @@
 
 <body>
     <div class="container">
-        <h2>Pago con Tarjeta</h2>
+        <h1>Pago con Tarjeta</h1>
+
         <form id="form-checkout">
             <div class="field">
-                <input id="form-checkout__cardholderName" placeholder="Nombre del titular" />
+                <label for="form-checkout__cardholderName">Nombre del titular</label>
+                <input type="text" id="form-checkout__cardholderName" placeholder="Nombre del titular">
             </div>
+
             <div class="field">
-                <input id="form-checkout__cardNumber" placeholder="Número de tarjeta" />
+                <label for="form-checkout__cardNumber">Número de tarjeta</label>
+                <input type="text" id="form-checkout__cardNumber" placeholder="1234 5678 9012 3456">
             </div>
+
             <div class="field">
-                <input id="form-checkout__expirationDate" placeholder="MM/YY" />
+                <label for="form-checkout__expirationDate">MM/YY</label>
+                <input type="text" id="form-checkout__expirationDate" placeholder="MM/YY">
             </div>
+
             <div class="field">
-                <input id="form-checkout__securityCode" placeholder="CVV" />
+                <label for="form-checkout__securityCode">CVV</label>
+                <input type="text" id="form-checkout__securityCode" placeholder="123">
             </div>
+
             <div class="field">
+                <label for="form-checkout__identificationType">Seleccionar tipo de documento</label>
                 <select id="form-checkout__identificationType">
                     <option value="">Seleccionar tipo de documento</option>
                 </select>
             </div>
+
             <div class="field">
-                <input id="form-checkout__identificationNumber" placeholder="Número de documento" />
+                <label for="form-checkout__identificationNumber">Número de documento</label>
+                <input type="text" id="form-checkout__identificationNumber" placeholder="Número de documento">
             </div>
+
             <div class="field">
+                <label for="form-checkout__issuer">Banco emisor</label>
+                <select id="form-checkout__issuer">
+                    <option value="">Seleccionar banco</option>
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="form-checkout__installments">Seleccionar cuotas</label>
                 <select id="form-checkout__installments">
                     <option value="">Seleccionar cuotas</option>
                 </select>
             </div>
-            <button type="submit" id="submit">Procesar Pago</button>
+
+            <button type="submit" id="form-checkout__submit">Procesar Pago</button>
         </form>
     </div>
 
+    <script src="https://sdk.mercadopago.com/js/v2"></script>
     <script>
-        const PUBLIC_KEY = 'APP_USR-03f91d11-09d8-4c9f-938e-88e3cd357cf1';
-
-        // Verificar que el SDK se cargó correctamente
-        if (typeof MercadoPago === 'undefined') {
-            console.error('MercadoPago SDK no se cargó correctamente');
-            alert('Error: No se pudo cargar el SDK de MercadoPago');
-        } else {
-            console.log('MercadoPago SDK cargado correctamente');
-        }
-
-        const mp = new MercadoPago(PUBLIC_KEY, {
+        const mp = new MercadoPago('APP_USR-03f91d11-09d8-4c9f-938e-88e3cd357cf1', {
             locale: 'es-AR'
         });
 
-        // Configuración del CardForm con manejo de errores mejorado
-        let cardForm;
-
-        try {
-            cardForm = mp.cardForm({
-                amount: '10.00',
-                autoMount: true,
-                form: {
-                    id: 'form-checkout',
-                    cardholderName: {
-                        id: 'form-checkout__cardholderName',
-                        placeholder: 'Nombre del titular'
-                    },
-                    cardNumber: {
-                        id: 'form-checkout__cardNumber',
-                        placeholder: 'Número de tarjeta'
-                    },
-                    expirationDate: {
-                        id: 'form-checkout__expirationDate',
-                        placeholder: 'MM/YY'
-                    },
-                    securityCode: {
-                        id: 'form-checkout__securityCode',
-                        placeholder: 'CVV'
-                    },
-                    identificationType: {
-                        id: 'form-checkout__identificationType'
-                    },
-                    identificationNumber: {
-                        id: 'form-checkout__identificationNumber',
-                        placeholder: 'Número de documento'
-                    },
-                    installments: {
-                        id: 'form-checkout__installments'
+        const cardForm = mp.cardForm({
+            amount: '10.00',
+            autoMount: true,
+            form: {
+                id: 'form-checkout',
+                cardholderName: {
+                    id: 'form-checkout__cardholderName',
+                    placeholder: 'Nombre del titular'
+                },
+                cardNumber: {
+                    id: 'form-checkout__cardNumber',
+                    placeholder: '1234 5678 9012 3456'
+                },
+                expirationDate: {
+                    id: 'form-checkout__expirationDate',
+                    placeholder: 'MM/YY'
+                },
+                securityCode: {
+                    id: 'form-checkout__securityCode',
+                    placeholder: 'CVV'
+                },
+                identificationType: {
+                    id: 'form-checkout__identificationType'
+                },
+                identificationNumber: {
+                    id: 'form-checkout__identificationNumber',
+                    placeholder: 'Número de documento'
+                },
+                issuer: {
+                    id: 'form-checkout__issuer'
+                },
+                installments: {
+                    id: 'form-checkout__installments'
+                }
+            },
+            callbacks: {
+                onFormMounted: error => {
+                    if (error) {
+                        console.warn('Form Mounted handling error: ', error);
+                    } else {
+                        console.log('Form mounted');
                     }
                 },
-                callbacks: {
-                    onFormMounted: error => {
-                        if (error) {
-                            console.error('Error al montar el formulario:', error);
-                            alert('Error al cargar el formulario de pago: ' + error.message);
-                        } else {
-                            console.log('CardForm montado correctamente');
-                        }
-                    },
-                    onReady: () => {
-                        console.log('CardForm listo para usar');
-                    },
-                    onFormUnmounted: error => {
-                        if (error) console.error('Error al desmontar:', error);
-                    },
-                    onIdentificationTypesReceived: (error, identificationTypes) => {
-                        if (error) {
-                            console.error('Error al obtener tipos de identificación:', error);
-                        } else {
-                            console.log('Tipos de identificación recibidos:', identificationTypes);
-                            // Verificar que se recibieron los tipos
-                            if (identificationTypes && identificationTypes.length > 0) {
-                                console.log('✓ Tipos de documento cargados correctamente');
+                onSubmit: event => {
+                    event.preventDefault();
+
+                    const {
+                        paymentMethodId,
+                        issuerId,
+                        cardholderEmail: email,
+                        amount,
+                        token,
+                        installments,
+                        identificationNumber,
+                        identificationType,
+                    } = cardForm.getCardFormData();
+
+                    console.log('Datos del formulario:', {
+                        paymentMethodId,
+                        issuerId,
+                        email,
+                        amount,
+                        token,
+                        installments,
+                        identificationNumber,
+                        identificationType,
+                    });
+
+                    // Construir el payload para el backend
+                    const paymentPayload = {
+                        userId: "1", // Reemplaza con el ID real del usuario
+                        courseId: "1", // Reemplaza con el ID real del curso
+                        mercadoPagoTokenId: token,
+                        installments: installments.toString(),
+                        paymentMethodId: paymentMethodId,
+                        paymentType: "credit_card"
+                    };
+
+                    console.log('Payload a enviar:', paymentPayload);
+
+                    // Enviar al backend
+                    fetch('http://localhost:1337/api/mercadopago/process-payment', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(paymentPayload)
+                    })
+                        .then(async res => {
+                            if (!res.ok) {
+                                throw new Error(`HTTP error! status: ${res.status}`);
                             }
-                        }
-                    },
-                    onPaymentMethodsReceived: (error, paymentMethods) => {
-                        if (error) {
-                            console.error('Error al obtener métodos de pago:', error);
-                        } else {
-                            console.log('Métodos de pago recibidos:', paymentMethods);
-                        }
-                    },
-                    onInstallmentsReceived: (error, installments) => {
-                        if (error) {
-                            console.error('Error al obtener cuotas:', error);
-                        } else {
-                            console.log('Cuotas recibidas:', installments);
-                            // Verificar que se recibieron las cuotas
-                            if (installments && installments.length > 0) {
-                                console.log('✓ Cuotas cargadas correctamente');
-                            }
-                        }
-                    },
-                    onCardTokenReceived: (error, token) => {
-                        if (error) {
-                            console.error('Error al obtener token:', error);
-                        } else {
-                            console.log('Token recibido:', token);
-                        }
-                    },
-                    onSubmit: async event => {
-                        event.preventDefault();
-
-                        try {
-                            console.log('Iniciando proceso de pago...');
-
-                            const data = cardForm.getCardFormData();
-                            console.log('Datos del formulario:', data);
-
-                            // Validaciones
-                            if (!data.token) {
-                                alert('Error: No se pudo generar el token de pago');
-                                return;
-                            }
-
-                            if (!data.paymentMethodId) {
-                                alert('Error: Método de pago no válido');
-                                return;
-                            }
-
-                            if (!data.identificationType || !data.identificationNumber) {
-                                alert('Error: Debe completar el tipo y número de documento');
-                                return;
-                            }
-
-                            const payload = {
-                                userId: 9,
-                                courseId: 'zwx9hi2a111ow1o0pc8oggoo',
-                                mercadoPagoTokenId: data.token,
-                                paymentMethodId: data.paymentMethodId,
-                                installments: Number(data.installments) || 1,
-                                paymentType: 'credit_card',
-                                payerIdentificationType: data.identificationType,
-                                payerIdentificationNumber: data.identificationNumber
-                            };
-
-                            console.log('Payload enviado:', payload);
-
-                            const res = await fetch('http://localhost:1337/api/mercadopago/payment', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify(payload)
-                            });
-
                             const json = await res.json();
-                            console.log('Respuesta backend:', json);
+                            console.log('Respuesta del backend:', json);
 
-                            if (json.success) {
+                            if (json.success !== false) {
                                 alert('¡Pago procesado exitosamente!');
                             } else {
                                 alert('Error en el pago: ' + (json.message || 'Error desconocido'));
                             }
-                        } catch (error) {
+                        })
+                        .catch(error => {
                             console.error('Error:', error);
                             alert('Error al procesar el pago: ' + error.message);
-                        }
-                    },
-                    onError: (error) => {
-                        console.error('Error general del CardForm:', error);
+                        });
+                },
+                onFetching: (resource) => {
+                    console.log('Fetching resource: ', resource);
+
+                    // Deshabilitar el botón de submit mientras se cargan los datos
+                    const submitButton = document.getElementById('form-checkout__submit');
+                    submitButton.setAttribute('disabled', 'true');
+                    return () => {
+                        submitButton.removeAttribute('disabled');
+                    };
+                },
+                onCardTokenReceived: (error, token) => {
+                    if (error) {
+                        console.error('Token handling error: ', error);
+                    } else {
+                        console.log('Token received: ', token);
+                    }
+                },
+                onInstallmentsReceived: (error, installments) => {
+                    if (error) {
+                        console.error('Installments handling error: ', error);
+                    } else {
+                        console.log('Installments received: ', installments);
+                    }
+                },
+                onIssuersReceived: (error, issuers) => {
+                    if (error) {
+                        console.error('Error al obtener emisores:', error);
+                    } else {
+                        console.log('Emisores recibidos:', issuers);
                     }
                 }
-            });
-        } catch (error) {
-            console.error('Error al inicializar CardForm:', error);
-            alert('Error al inicializar el formulario de pago');
-        }
-
-        // Función para debugging - puedes llamarla desde la consola
-        window.debugCardForm = () => {
-            console.log('=== DEBUG CARDFORM ===');
-            console.log('CardForm instance:', cardForm);
-            console.log('Identification types select:', document.getElementById('form-checkout__identificationType'));
-            console.log('Installments select:', document.getElementById('form-checkout__installments'));
-
-            // Verificar opciones en los selects
-            const idTypeSelect = document.getElementById('form-checkout__identificationType');
-            const installmentsSelect = document.getElementById('form-checkout__installments');
-
-            console.log('ID Types options:', idTypeSelect.options.length);
-            console.log('Installments options:', installmentsSelect.options.length);
-
-            for (let i = 0; i < idTypeSelect.options.length; i++) {
-                console.log(`ID Type ${i}:`, idTypeSelect.options[i].value, idTypeSelect.options[i].text);
             }
-
-            for (let i = 0; i < installmentsSelect.options.length; i++) {
-                console.log(`Installment ${i}:`, installmentsSelect.options[i].value, installmentsSelect.options[i].text);
-            }
-        };
-
-        // Auto-debug después de 3 segundos
-        setTimeout(() => {
-            window.debugCardForm();
-        }, 3000);
+        });
     </script>
 </body>
 
