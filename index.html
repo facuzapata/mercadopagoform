@@ -2,155 +2,99 @@
 <html lang="es">
 
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Demo Mercado Pago PRO (solo frontend)</title>
+    <meta charset="utf-8" />
+    <title>Pago con tarjeta</title>
     <script src="https://sdk.mercadopago.com/js/v2"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 720px;
-            margin: 32px auto;
-            padding: 0 16px;
-        }
-
-        label {
-            display: block;
-            margin-top: 10px;
-            font-weight: 600;
-        }
-
-        input,
-        select,
-        button {
-            width: 100%;
-            padding: 8px;
-            margin-top: 6px;
-            box-sizing: border-box;
-        }
-
-        .row {
-            display: flex;
-            gap: 10px;
-        }
-
-        .row>* {
-            flex: 1;
-        }
-
-        pre {
-            background: #f6f8fa;
-            padding: 10px;
-            border-radius: 6px;
-            overflow: auto;
+        /* estilos mínimos para inputs */
+        .field {
+            margin-bottom: 8px;
         }
     </style>
 </head>
 
 <body>
-
-    <h1>Demo PRO: token + cuotass</h1>
-
-    <form id="mp-form">
-        <label>Email
-            <input id="email" type="email" value="test_user@example.com" required>
-        </label>
-
-        <label>Número de tarjeta
-            <input id="cardNumber" placeholder="4509 9535 6623 3704" required>
-        </label>
-
-        <div class="row">
-            <div>
-                <label>Mes<input id="cardExpirationMonth" placeholder="12" required></label>
-            </div>
-            <div>
-                <label>Año<input id="cardExpirationYear" placeholder="2028" required></label>
-            </div>
+    <form id="form-checkout">
+        <div class="field"><input id="form-checkout__cardholderName" placeholder="Nombre del titular" /></div>
+        <div class="field"><input id="form-checkout__cardNumber" placeholder="Número de tarjeta" /></div>
+        <div class="field"><input id="form-checkout__expirationDate" placeholder="MM/YY" /></div>
+        <div class="field"><input id="form-checkout__securityCode" placeholder="CVV" /></div>
+        <div class="field">
+            <select id="form-checkout__identificationType"></select>
         </div>
-
-        <div class="row">
-            <div>
-                <label>CVV<input id="securityCode" placeholder="123" required></label>
-            </div>
-            <div>
-                <label>Titular<input id="cardholderName" placeholder="Nombre Apellido" required></label>
-            </div>
+        <div class="field"><input id="form-checkout__identificationNumber" placeholder="DNI" /></div>
+        <div class="field">
+            <select id="form-checkout__installments"></select>
         </div>
-
-        <label>Documento
-            <div class="row">
-                <select id="docType">
-                    <option value="DNI">DNI</option>
-                </select>
-                <input id="docNumber" placeholder="19119119">
-            </div>
-        </label>
-
-        <label>Cuotas
-            <select id="installments" required>
-                <option value="">Seleccionar...</option>
-                <option value="1">1 cuota</option>
-                <option value="3">3 cuotas</option>
-                <option value="6">6 cuotas</option>
-            </select>
-        </label>
-
-        <button type="submit">Generar datos</button>
+        <button type="submit" id="submit">Pagar</button>
     </form>
 
-    <h3>Resultado</h3>
-    <pre id="result">Esperando acción...</pre>
-
     <script>
-        const PUBLIC_KEY = "APP_USR-03f91d11-09d8-4c9f-938e-88e3cd357cf1";
-        const mp = new MercadoPago(PUBLIC_KEY, { locale: "es-AR" });
+        const PUBLIC_KEY = 'APP_USR-03f91d11-09d8-4c9f-938e-88e3cd357cf1'; // mismo ambiente que el access token del backend
+        const mp = new MercadoPago(PUBLIC_KEY, { locale: 'es-AR' });
 
-        document.getElementById("mp-form").addEventListener("submit", async (e) => {
-            e.preventDefault();
-            const resultEl = document.getElementById("result");
+        const cardForm = mp.cardForm({
+            amount: '10.00',
+            autoMount: true,
+            form: {
+                id: 'form-checkout',
+                cardholderName: { id: 'form-checkout__cardholderName' },
+                cardNumber: { id: 'form-checkout__cardNumber' },
+                expirationDate: { id: 'form-checkout__expirationDate' },
+                securityCode: { id: 'form-checkout__securityCode' },
+                identificationType: { id: 'form-checkout__identificationType' },
+                identificationNumber: { id: 'form-checkout__identificationNumber' },
+                installments: { id: 'form-checkout__installments' }
+            },
+            callbacks: {
+                onFormMounted: error => {
+                    if (error) console.warn('Formulario no montado', error);
+                    else console.log('CardForm montado correctamente');
+                },
+                onSubmit: async event => {
+                    event.preventDefault();
 
-            try {
-                const cardData = {
-                    card_number: document.getElementById("cardNumber").value.replace(/\s/g, ""),
-                    expiration_month: document.getElementById("cardExpirationMonth").value,
-                    expiration_year: document.getElementById("cardExpirationYear").value,
-                    security_code: document.getElementById("securityCode").value,
-                    cardholder: {
-                        name: document.getElementById("cardholderName").value,
-                        identification: {
-                            type: document.getElementById("docType").value,
-                            number: document.getElementById("docNumber").value
+                    try {
+                        const data = cardForm.getCardFormData();
+                        console.log('Datos del formulario:', data);
+
+                        // Payload corregido para coincidir con tu backend
+                        const payload = {
+                            userId: 9,
+                            courseId: 'zwx9hi2a111ow1o0pc8oggoo',
+                            mercadoPagoTokenId: data.token,
+                            paymentMethodId: data.paymentMethodId,
+                            installments: Number(data.installments) || 1,
+                            paymentType: 'credit_card',
+                            payerIdentificationType: data.identificationType,
+                            payerIdentificationNumber: data.identificationNumber
+                        };
+
+                        console.log('Payload enviado:', payload);
+
+                        // Cambia esta URL por tu backend real
+                        const res = await fetch('http://localhost:1337/api/mercadopago/payment', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        const json = await res.json();
+                        console.log('Respuesta backend:', json);
+
+                        if (json.success) {
+                            alert('Pago procesado exitosamente!');
+                        } else {
+                            alert('Error en el pago: ' + (json.message || 'Error desconocido'));
                         }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Error al procesar el pago');
                     }
-                };
-
-                // Crear token con MercadoPago
-                const tokenRes = await mp.createCardToken(cardData);
-
-                // Asegurarse de que card exista
-                const card = tokenRes.card || {};
-
-
-                // payment_method_id y payment_type_id vienen en tokenRes
-                const finalData = {
-                    userId: 9,
-                    courseId: "zwx9hi2a111ow1o0pc8oggoo",
-                    mercadoPagoTokenId: tokenRes.id,
-                    paymentMethodId: card.payment_method?.id || "debmaster", // fallback en test
-                    paymentType: card.payment_method?.payment_type_id || "debit_card",
-                    installments: parseInt(document.getElementById("installments").value || "1")
-                };
-
-                resultEl.textContent = JSON.stringify(finalData, null, 2);
-
-            } catch (err) {
-                console.error(err);
-                resultEl.textContent = "Error: " + (err.message || JSON.stringify(err));
+                }
             }
         });
     </script>
-
 </body>
 
 </html>
